@@ -1,3 +1,7 @@
+param(
+  [string]$ApiUrl = ''
+)
+
 $ErrorActionPreference = 'Stop'
 
 function Read-DotEnvValue($name) {
@@ -12,7 +16,11 @@ function Read-DotEnvValue($name) {
   return ($line -replace "^$name=", '').Trim()
 }
 
-$apiUrl = "http://localhost:$((Read-DotEnvValue 'PORT'))"
+$port = Read-DotEnvValue 'PORT'
+if (-not $ApiUrl) {
+  $ApiUrl = "http://localhost:$port"
+}
+$ApiUrl = $ApiUrl.TrimEnd('/')
 $setupKey = Read-DotEnvValue 'TUTOR_SETUP_KEY'
 
 Write-Host 'Create Campus2Class tutor account' -ForegroundColor Cyan
