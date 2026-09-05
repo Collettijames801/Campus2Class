@@ -47,11 +47,24 @@ Runs on http://localhost:5173
    dashboard, create a live app, and swap in the live Client ID/Secret. Set
    `PAYPAL_ENV=live` in the backend.
 
-## Changing your availability
+## Tutor accounts and availability
 
-Edit `backend/src/availability.js` — the `WEEKLY_TEMPLATE` object controls
-which days/times are open for booking. Update it whenever your class
-schedule changes; it regenerates the next 21 days automatically.
+Create the first tutor with the setup key configured in `TUTOR_SETUP_KEY`:
+
+```
+POST /api/tutor/setup
+{
+   "name": "Tutor Name",
+   "email": "tutor@example.com",
+   "password": "at-least-8-characters",
+   "subjects": ["math", "english"]
+}
+```
+
+After creating an account, use `/tutor-login` in the frontend. The tutor
+dashboard at `/tutor-dashboard` manages weekly time ranges and lists upcoming
+bookings. Availability is generated from active tutor ranges for the next 21
+days; the old hardcoded weekly template is no longer used.
 
 ## Changing pricing or adding courses
 
@@ -70,7 +83,8 @@ Create a new repo (e.g. `campus2class`) and push this whole folder.
 - Build command: `npm install`
 - Start command: `npm start`
 - Add environment variables: `PAYPAL_ENV`, `PAYPAL_CLIENT_ID`,
-   `PAYPAL_CLIENT_SECRET`, `ADMIN_KEY`, `RESEND_API_KEY`, `EMAIL_FROM`
+   `PAYPAL_CLIENT_SECRET`, `ADMIN_KEY`, `RESEND_API_KEY`, `EMAIL_FROM`,
+   `JWT_SECRET`, `TUTOR_SETUP_KEY`
 - Note the resulting URL (e.g. `https://campus2class-api.onrender.com`)
 
 **3. Frontend → Vercel**
@@ -95,3 +109,8 @@ site) and point it at the Vercel project the same way.
 protected — send header `x-admin-key: <your ADMIN_KEY>`. There's no admin
 UI yet; this is meant to be checked manually or wired into a spreadsheet
 later if it's worth building out.
+
+The backend now stores clients, payments, tutors, tutor availability, and
+short-lived checkout holds in SQLite. For the current volume SQLite is fine;
+move these records to Postgres when booking volume or concurrent tutors makes
+single-file database writes a bottleneck.

@@ -306,7 +306,12 @@ export default function BookingFlow({ courses, selection, setSelection }) {
                     });
                     return res.orderId;
                   } catch (e) {
-                    setPayError(e.message);
+                    if (e.status === 409) {
+                      setPayError('That time was just taken — please pick another.');
+                      setStep(2);
+                    } else {
+                      setPayError(e.message);
+                    }
                     throw e;
                   }
                 }}

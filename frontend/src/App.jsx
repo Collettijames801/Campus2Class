@@ -8,8 +8,11 @@ import Pricing from './components/Pricing';
 import BookingFlow from './components/BookingFlow';
 import Faq from './components/Faq';
 import Footer from './components/Footer';
+import TutorLogin from './components/TutorLogin';
+import TutorDashboard from './components/TutorDashboard';
 
 export default function App() {
+  const tutorPath = window.location.pathname;
   const [courses, setCourses] = useState(null);
   const [selection, setSelection] = useState({
     subject: 'math',
@@ -19,8 +22,12 @@ export default function App() {
   });
 
   useEffect(() => {
+    if (tutorPath === '/tutor-login' || tutorPath === '/tutor-dashboard') return;
     fetchCourses().then(setCourses).catch(() => setCourses(null));
-  }, []);
+  }, [tutorPath]);
+
+  if (tutorPath === '/tutor-login') return <TutorLogin />;
+  if (tutorPath === '/tutor-dashboard') return <TutorDashboard />;
 
   return (
     <div className="min-h-screen">
