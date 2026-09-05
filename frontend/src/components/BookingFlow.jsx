@@ -41,7 +41,7 @@ export default function BookingFlow({ courses, selection, setSelection }) {
   }, [selection.subject, selection.courseId, selection.struggle, selection.format]);
 
   useEffect(() => {
-    if (step === 3) {
+    if (step === 2) {
       fetchAvailability().then(setAvailability).catch(() => setAvailability([]));
     }
   }, [step]);
