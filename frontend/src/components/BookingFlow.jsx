@@ -57,8 +57,10 @@ export default function BookingFlow({ courses, selection, setSelection }) {
         <p className="font-display text-2xl text-[var(--color-ink)]">You're booked!</p>
         <p className="mx-auto mt-3 max-w-md text-[15px] text-[var(--color-ink-soft)]">
           {confirmed.studentName}'s session is confirmed for {confirmed.date} at{' '}
-          {confirmed.time} ({confirmed.sessionLength} hr, {confirmed.format}). A
-          confirmation has been sent to {confirmed.parentEmail}.
+          {confirmed.time} ({confirmed.sessionLength} hr, {confirmed.format}).{' '}
+          {confirmed.emailSent
+            ? `A confirmation has been sent to ${confirmed.parentEmail}.`
+            : 'Your payment was captured, but we could not send the confirmation email. Please contact us to verify your booking.'}
         </p>
       </div>
     );
@@ -310,7 +312,7 @@ export default function BookingFlow({ courses, selection, setSelection }) {
                 }}
                 onApprove={async (data) => {
                   try {
-                    await capturePaypalOrder(data.orderID, {
+                    const result = await capturePaypalOrder(data.orderID, {
                       ...contact,
                       subject: selection.subject,
                       courseId: selection.courseId,
@@ -320,7 +322,14 @@ export default function BookingFlow({ courses, selection, setSelection }) {
                       date: chosenDate,
                       time: chosenTime,
                     });
-                    setConfirmed({ ...contact, date: chosenDate, time: chosenTime, sessionLength, format: selection.format });
+                    setConfirmed({
+                      ...contact,
+                      date: chosenDate,
+                      time: chosenTime,
+                      sessionLength,
+                      format: selection.format,
+                      emailSent: result.emailSent,
+                    });
                   } catch (e) {
                     setPayError(e.message);
                   }

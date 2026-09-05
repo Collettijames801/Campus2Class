@@ -70,15 +70,20 @@ Create a new repo (e.g. `campus2class`) and push this whole folder.
 - Build command: `npm install`
 - Start command: `npm start`
 - Add environment variables: `PAYPAL_ENV`, `PAYPAL_CLIENT_ID`,
-  `PAYPAL_CLIENT_SECRET`, `ADMIN_KEY`
+   `PAYPAL_CLIENT_SECRET`, `ADMIN_KEY`, `RESEND_API_KEY`, `EMAIL_FROM`
 - Note the resulting URL (e.g. `https://campus2class-api.onrender.com`)
 
 **3. Frontend → Vercel**
 - New Project → import the same repo → set **Root Directory** to `frontend`
 - Framework preset: Vite
 - Environment variables: `VITE_API_URL` = your Render backend URL,
-  `VITE_PAYPAL_CLIENT_ID` = your PayPal client ID
+   `VITE_PAYPAL_CLIENT_ID` = your PayPal live client ID
 - Deploy
+
+For live payments, use a live PayPal app and set `PAYPAL_ENV=live` on Render.
+Set `RESEND_API_KEY` to a Resend API key and `EMAIL_FROM` to an address on a
+verified Resend domain. The booking is saved even if email delivery fails; the
+customer-facing confirmation will say when the email could not be sent.
 
 **4. Custom domain**
 Buy a domain (e.g. from GoDaddy, like you did for the Battle of the Bands

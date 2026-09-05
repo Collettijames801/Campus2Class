@@ -7,6 +7,7 @@ const db = require('./db');
 const { COURSES, getQuote } = require('./pricing');
 const { getAvailability, isSlotAvailable } = require('./availability');
 const paypal = require('./paypal');
+const { sendConfirmationEmail } = require('./email');
 
 const app = express();
 app.use(cors());
@@ -121,7 +122,24 @@ app.post('/api/paypal/capture-order', async (req, res) => {
       'paid'
     );
 
-    res.json({ success: true, bookingId: id, capture });
+    let emailSent = false;
+    try {
+      emailSent = await sendConfirmationEmail({
+        parentEmail,
+        parentName,
+        studentName,
+        course: quote.course.label,
+        format,
+        sessionLength,
+        date,
+        time,
+        total,
+      });
+    } catch (emailError) {
+      console.error(emailError);
+    }
+
+    res.json({ success: true, bookingId: id, capture, emailSent });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
