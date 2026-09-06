@@ -37,9 +37,10 @@ export default function Hero({ courses, selection, setSelection }) {
             An honors college student, tutoring your kid toward theirs.
           </h1>
           <p className="mt-6 max-w-md text-lg leading-relaxed text-[var(--color-ink-soft)]">
-            Campus2Class connects Monmouth County families with vetted honors
-            college students who tutor Math and English, session by session,
-            to help pay their own way through school.
+            Campus2Class connects Monmouth County families with thoughtful
+            honors college tutors for Math and English. Your child gets a
+            session built around what they need; your tutor gets a practical
+            way to keep moving toward a degree.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">
@@ -76,7 +77,8 @@ export default function Hero({ courses, selection, setSelection }) {
         <div className="rounded-md border border-[var(--color-line)] bg-[var(--color-paper-card)] p-6 shadow-[0_1px_0_var(--color-line)] md:p-7">
           <p className="font-display text-lg text-[var(--color-ink)]">See what a session costs</p>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-            Answer three questions, get a real hourly rate — no calls, no forms.
+            Tell us the course and the kind of help your student needs. You’ll
+            see the actual rate before you choose a time.
           </p>
 
           <div className="mt-6 space-y-4">

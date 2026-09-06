@@ -63,8 +63,16 @@ POST /api/tutor/setup
 
 After creating an account, use `/tutor-login` in the frontend. The tutor
 dashboard at `/tutor-dashboard` manages weekly time ranges and lists upcoming
-bookings. Availability is generated from active tutor ranges for the next 21
+bookings. Availability is generated from active tutor ranges for the next 35
 days; the old hardcoded weekly template is no longer used.
+
+Recurring bookings are currently charged in full at checkout for up to four
+weekly sessions. Each session is stored separately and gets its own calendar
+download. Automatic per-session charging is not enabled yet: PayPal
+Subscriptions uses products/plans and the JavaScript/Subscriptions APIs, while
+vaulting or reference transactions require separate PayPal account/API access
+and merchant approval. Confirm that access with PayPal before building that
+follow-up flow.
 
 ## Changing pricing or adding courses
 

@@ -6,8 +6,8 @@ export default function Footer() {
           <div>
             <p className="font-display text-lg">Campus2Class</p>
             <p className="mt-2 max-w-xs text-sm text-white/60">
-              Local honors college students tutoring Monmouth County middle
-              and high schoolers in Math and English.
+              Thoughtful honors college tutors helping Monmouth County
+              students make the next lesson feel manageable.
             </p>
           </div>
 

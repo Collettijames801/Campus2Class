@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchTutorAvailability, fetchTutorBookings, saveTutorAvailability } from '../lib/api';
+import { bookingCalendarUrl, fetchTutorAvailability, fetchTutorBookings, saveTutorAvailability } from '../lib/api';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const EMPTY_BLOCK = { dayOfWeek: 1, startTime: '4:00 PM', endTime: '7:00 PM' };
@@ -48,6 +48,11 @@ export default function TutorDashboard() {
     window.location.href = '/tutor-login';
   }
 
+  const agenda = bookings.reduce((groups, booking) => {
+    (groups[booking.session_date] ||= []).push(booking);
+    return groups;
+  }, {});
+
   return (
     <main className="min-h-screen bg-[var(--color-paper)] px-6 py-10 text-[var(--color-ink)]">
       <div className="mx-auto max-w-5xl">
@@ -91,15 +96,23 @@ export default function TutorDashboard() {
 
           <div>
             <h2 className="font-display text-2xl">Upcoming bookings</h2>
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 space-y-6">
               {bookings.length === 0 && <p className="text-sm text-[var(--color-ink-soft)]">No bookings yet.</p>}
-              {bookings.map((booking) => (
-                <article key={booking.id} className="rounded-sm border border-[var(--color-line)] bg-white p-4 text-sm">
-                  <div className="flex justify-between gap-4 font-semibold"><span>{booking.session_date} at {booking.session_time}</span><span>${booking.total_price.toFixed(2)}</span></div>
-                  <p className="mt-2">{booking.student_name} - {booking.course}</p>
-                  <p className="mt-1 text-[var(--color-ink-soft)]">Client: {booking.client_name} ({booking.client_email})</p>
-                  <p className="mt-1 text-[var(--color-ink-soft)]">{booking.format}, {booking.session_length} hour{booking.session_length === 1 ? '' : 's'}</p>
-                </article>
+              {Object.entries(agenda).map(([date, dateBookings]) => (
+                <div key={date}>
+                  <h3 className="font-display text-lg">{date}</h3>
+                  <div className="mt-2 space-y-3">
+                    {dateBookings.map((booking) => (
+                      <article key={booking.id} className="rounded-sm border border-[var(--color-line)] bg-white p-4 text-sm">
+                        <div className="flex justify-between gap-4 font-semibold"><span>{booking.session_time}</span><span>${booking.total_price.toFixed(2)}</span></div>
+                        <p className="mt-2">{booking.student_name} - {booking.course}</p>
+                        <p className="mt-1 text-[var(--color-ink-soft)]">Client: {booking.client_name} ({booking.client_email})</p>
+                        <p className="mt-1 text-[var(--color-ink-soft)]">{booking.format}, {booking.session_length} hour{booking.session_length === 1 ? '' : 's'}</p>
+                        {booking.calendar_token && <a className="mt-3 inline-block text-xs font-semibold text-[var(--color-brass-dark)] underline" href={bookingCalendarUrl(booking)}>Download calendar file</a>}
+                      </article>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </div>

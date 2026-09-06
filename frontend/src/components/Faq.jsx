@@ -17,7 +17,7 @@ const FAQS = [
   },
   {
     q: 'Can I book recurring weekly sessions?',
-    a: 'Right now each session is booked individually, so you can find a rhythm that works before committing to a set schedule. Weekly packages are coming soon.',
+    a: 'Yes. Choose a starting time and select weekly for four weeks. The full series is held and paid upfront so those times stay yours.',
   },
 ];
 

@@ -1,7 +1,7 @@
 const db = require('./db');
 const { v4: uuidv4 } = require('uuid');
 
-const DAYS_AHEAD = 21;
+const DAYS_AHEAD = 35;
 const HOLD_MINUTES = 10;
 
 function formatDateISO(date) {
@@ -120,18 +120,42 @@ function createSlotHold(date, time) {
   }
 }
 
-function attachOrderToHold(holdId, orderId) {
-  db.prepare('UPDATE slot_holds SET paypal_order_id = ? WHERE id = ?').run(orderId, holdId);
+function createSlotHolds(slots) {
+  const ids = [];
+  try {
+    for (const slot of slots) {
+      const id = createSlotHold(slot.date, slot.time);
+      if (!id) throw new Error('That time slot is no longer available.');
+      ids.push(id);
+    }
+    return ids;
+  } catch (error) {
+    ids.forEach((id) => releaseSlotHold(id));
+    return null;
+  }
 }
 
-function getHoldForOrder(orderId) {
+function attachOrderToHold(holdId, orderId) {
+  db.prepare('UPDATE slot_holds SET paypal_order_id = ?, hold_group_id = ? WHERE id = ?').run(orderId, orderId, holdId);
+}
+
+function attachOrderToHolds(holdIds, orderId) {
+  const update = db.prepare('UPDATE slot_holds SET paypal_order_id = ?, hold_group_id = ? WHERE id = ?');
+  db.transaction(() => {
+    holdIds.forEach((holdId, index) => {
+      update.run(index === 0 ? orderId : null, orderId, holdId);
+    });
+  })();
+}
+
+function getHoldsForOrder(orderId) {
   cleanupExpiredHolds();
-  return db.prepare('SELECT * FROM slot_holds WHERE paypal_order_id = ?').get(orderId);
+  return db.prepare('SELECT * FROM slot_holds WHERE hold_group_id = ? OR paypal_order_id = ? ORDER BY session_date').all(orderId, orderId);
 }
 
 function releaseSlotHold(value) {
   if (value) {
-    db.prepare('DELETE FROM slot_holds WHERE paypal_order_id = ? OR id = ?').run(value, value);
+    db.prepare('DELETE FROM slot_holds WHERE paypal_order_id = ? OR hold_group_id = ? OR id = ?').run(value, value, value);
   }
 }
 
@@ -140,7 +164,9 @@ module.exports = {
   isSlotAvailable,
   validateTimeRange,
   createSlotHold,
+  createSlotHolds,
   attachOrderToHold,
-  getHoldForOrder,
+  attachOrderToHolds,
+  getHoldsForOrder,
   releaseSlotHold,
 };

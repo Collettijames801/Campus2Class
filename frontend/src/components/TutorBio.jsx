@@ -13,8 +13,8 @@ export default function TutorBio() {
             </li>
             <li className="flex gap-3">
               <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-brass)]" />
-              Every session goes directly toward tuition — no student loans,
-              no accumulating debt
+                Every session helps cover tuition without adding another loan
+                balance
             </li>
             <li className="flex gap-3">
               <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-brass)]" />
@@ -29,17 +29,17 @@ export default function TutorBio() {
             Why a college student, and not a certified teacher?
           </h2>
           <p className="mt-5 max-w-lg text-[15px] leading-relaxed text-[var(--color-ink-soft)]">
-            Because it wasn't that long ago that I was sitting where your kid
-            is sitting — same textbooks, same tests, same subjects. Honors
-            college students remember what actually trips students up in
-            Algebra II or a Lit essay, and how to explain it without the
-            jargon.
+            Because it wasn’t that long ago that I was sitting where your kid
+            is sitting: the same textbooks, the same tests, and the same
+            moments where one explanation finally makes the lesson click.
+            Honors college tutors remember those sticking points and know how
+            to explain them without making the room feel more complicated.
           </p>
           <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-[var(--color-ink-soft)]">
-            And every hour parents book pays into an honors student's tuition
-            instead of a loan balance. As Campus2Class grows, that's the same
-            standard every tutor who joins will be held to: honors-level
-            students, working toward their own degree, debt-free.
+            Every hour also has a clear purpose beyond the session itself: it
+            helps an honors student keep working toward a degree. As
+            Campus2Class grows, that remains the standard for every tutor who
+            joins.
           </p>
         </div>
       </div>

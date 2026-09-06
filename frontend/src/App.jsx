@@ -14,6 +14,7 @@ import TutorDashboard from './components/TutorDashboard';
 export default function App() {
   const tutorPath = window.location.pathname;
   const [courses, setCourses] = useState(null);
+  const [coursesError, setCoursesError] = useState('');
   const [selection, setSelection] = useState({
     subject: 'math',
     courseId: 'algebra-1',
@@ -23,7 +24,7 @@ export default function App() {
 
   useEffect(() => {
     if (tutorPath === '/tutor-login' || tutorPath === '/tutor-dashboard') return;
-    fetchCourses().then(setCourses).catch(() => setCourses(null));
+    fetchCourses().then(setCourses).catch((error) => setCoursesError(error.message));
   }, [tutorPath]);
 
   if (tutorPath === '/tutor-login') return <TutorLogin />;
@@ -45,6 +46,11 @@ export default function App() {
         <div className="mt-8">
           {courses ? (
             <BookingFlow courses={courses} selection={selection} setSelection={setSelection} />
+          ) : coursesError ? (
+            <div className="rounded-sm bg-red-50 px-4 py-3 text-sm text-red-700">
+              <p>{coursesError}</p>
+              <button className="mt-2 font-semibold underline" onClick={() => window.location.reload()}>Try again</button>
+            </div>
           ) : (
             <p className="text-sm text-[var(--color-ink-soft)]">Loading booking form…</p>
           )}

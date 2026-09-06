@@ -1,18 +1,18 @@
 const STEPS = [
   {
     n: '1',
-    title: 'Tell us what your kid needs help with',
-    body: "A quick survey on the subject, course, and what's actually going on — falling behind, prepping for a test, or just wants to get ahead.",
+    title: 'Start with the real problem',
+    body: "Choose the course and tell us what’s going on: catching up, preparing for a test, or building confidence before the next one.",
   },
   {
     n: '2',
-    title: 'Get a real price, instantly',
-    body: 'No quotes over the phone. The rate is calculated right there based on the course level and format — Zoom or in-person in Monmouth County.',
+    title: 'See the rate before you commit',
+    body: 'The course level and format determine the price. You’ll see the full total before you pick a time or open PayPal.',
   },
   {
     n: '3',
-    title: 'Pick a time and pay securely',
-    body: 'Choose an open slot, pay through PayPal, and you\u2019re booked. A confirmation goes straight to your email.',
+    title: 'Choose a time that fits',
+    body: 'Reserve one session or a four-week weekly series, pay securely through PayPal, and get a calendar file for the booking.',
   },
 ];
 

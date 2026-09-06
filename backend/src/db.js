@@ -49,6 +49,7 @@ db.exec(`
     session_date TEXT NOT NULL,
     session_time TEXT NOT NULL,
     paypal_order_id TEXT UNIQUE,
+    hold_group_id TEXT,
     expires_at TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE (session_date, session_time)
@@ -61,6 +62,7 @@ db.exec(`
     student_name TEXT NOT NULL,
     grade_level TEXT NOT NULL,
     subject TEXT NOT NULL,
+    course_id TEXT,
     course TEXT NOT NULL,
     struggle TEXT NOT NULL,
     format TEXT NOT NULL,
@@ -69,6 +71,13 @@ db.exec(`
     total_price REAL NOT NULL,
     session_date TEXT NOT NULL,
     session_time TEXT NOT NULL,
+    address_street TEXT,
+    address_town TEXT,
+    address_zip TEXT,
+    series_id TEXT,
+    series_index INTEGER NOT NULL DEFAULT 1,
+    series_total INTEGER NOT NULL DEFAULT 1,
+    calendar_token TEXT UNIQUE,
     notes TEXT,
     payment_status TEXT NOT NULL DEFAULT 'pending',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -89,5 +98,22 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_bookings_session ON bookings(session_date, session_time);
   CREATE INDEX IF NOT EXISTS idx_payments_booking ON payments(booking_id);
 `);
+
+const bookingTableColumns = db.prepare("PRAGMA table_info('bookings')").all().map((column) => column.name);
+const holdTableColumns = db.prepare("PRAGMA table_info('slot_holds')").all().map((column) => column.name);
+const addColumn = (table, column, definition, columns) => {
+  if (!columns.includes(column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+};
+
+addColumn('bookings', 'address_street', 'TEXT', bookingTableColumns);
+addColumn('bookings', 'course_id', 'TEXT', bookingTableColumns);
+addColumn('bookings', 'address_town', 'TEXT', bookingTableColumns);
+addColumn('bookings', 'address_zip', 'TEXT', bookingTableColumns);
+addColumn('bookings', 'series_id', 'TEXT', bookingTableColumns);
+addColumn('bookings', 'series_index', 'INTEGER NOT NULL DEFAULT 1', bookingTableColumns);
+addColumn('bookings', 'series_total', 'INTEGER NOT NULL DEFAULT 1', bookingTableColumns);
+addColumn('bookings', 'calendar_token', 'TEXT', bookingTableColumns);
+addColumn('slot_holds', 'hold_group_id', 'TEXT', holdTableColumns);
+db.exec('CREATE INDEX IF NOT EXISTS idx_slot_holds_group ON slot_holds(hold_group_id)');
 
 module.exports = db;

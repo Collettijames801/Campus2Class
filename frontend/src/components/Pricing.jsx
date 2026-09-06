@@ -12,10 +12,9 @@ export default function Pricing() {
         <div className="max-w-2xl">
           <h2 className="font-display text-3xl text-[var(--color-ink)] md:text-4xl">Subjects &amp; pricing</h2>
           <p className="mt-4 text-[15px] leading-relaxed text-[var(--color-ink-soft)]">
-            Every course from a middle school curriculum through AP is
-            covered in both Math and English. Rates are set by course level,
-            benchmarked against local tutoring rates so it's fair for both
-            sides.
+            The catalog covers middle school through AP in Math and English.
+            Rates follow the course level, so the price is clear before a
+            family chooses a time.
           </p>
         </div>
 
@@ -41,8 +40,8 @@ export default function Pricing() {
 
         <p className="mt-4 text-sm text-[var(--color-ink-soft)]">
           In-person sessions in Monmouth County add $10/hr for travel. Zoom
-          sessions have no surcharge. Get an exact quote for your student's
-          course below.
+          sessions have no surcharge. The booking form gives you the exact
+          total for your student’s course.
         </p>
       </div>
     </section>

@@ -9,12 +9,14 @@ const {
   getAvailability,
   validateTimeRange,
   createSlotHold,
-  attachOrderToHold,
-  getHoldForOrder,
+  createSlotHolds,
+  attachOrderToHolds,
+  getHoldsForOrder,
   releaseSlotHold,
 } = require('./availability');
 const paypal = require('./paypal');
 const { sendConfirmationEmail } = require('./email');
+const { bookingToIcs } = require('./calendar');
 const { hashPassword, checkPassword, createToken, requireTutor } = require('./tutorAuth');
 
 const app = express();
@@ -35,6 +37,19 @@ app.post('/api/quote', (req, res) => {
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
+});
+
+app.post('/api/client/history', (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+  if (!email) return res.json({ returning: false });
+  const booking = db.prepare(`
+    SELECT subject, course_id, course, struggle, format
+    FROM bookings b JOIN clients c ON c.id = b.client_id
+    WHERE c.email = ? AND b.payment_status = 'paid'
+    ORDER BY b.created_at DESC LIMIT 1
+  `).get(email);
+  if (!booking) return res.json({ returning: false });
+  res.json({ returning: true, lastBooking: booking });
 });
 
 // ---- Availability ----
@@ -125,6 +140,18 @@ app.get('/api/tutor/bookings', requireTutor, (req, res) => {
   res.json(bookings);
 });
 
+app.get('/api/bookings/:id/calendar.ics', (req, res) => {
+  const booking = db.prepare(`
+    SELECT b.*, c.name AS client_name, c.email AS client_email
+    FROM bookings b JOIN clients c ON c.id = b.client_id
+    WHERE b.id = ? AND b.calendar_token = ? AND b.payment_status = 'paid'
+  `).get(req.params.id, req.query.token);
+  if (!booking) return res.status(404).send('Calendar file not found');
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  res.type('text/calendar').set('Content-Disposition', `attachment; filename="campus2class-${booking.session_date}.ics"`);
+  res.send(bookingToIcs(booking, baseUrl));
+});
+
 // ---- PayPal: create order ----
 app.post('/api/paypal/create-order', async (req, res) => {
   try {
@@ -136,12 +163,19 @@ app.post('/api/paypal/create-order', async (req, res) => {
       sessionLength, // in hours, e.g. 1 or 1.5
       date,
       time,
+      sessions,
     } = req.body;
 
     const quote = getQuote({ subject, courseId, struggle, format });
-    const total = quote.ratePerHour * Number(sessionLength);
-    const holdId = createSlotHold(date, time);
-    if (!holdId) {
+    const requestedSessions = Array.isArray(sessions) && sessions.length > 0
+      ? sessions
+      : [{ date, time }];
+    if (requestedSessions.length > 4 || requestedSessions.some((session) => !session.date || !session.time)) {
+      return res.status(400).json({ error: 'Choose between one and four valid sessions.' });
+    }
+    const total = quote.ratePerHour * Number(sessionLength) * requestedSessions.length;
+    const holdIds = createSlotHolds(requestedSessions);
+    if (!holdIds) {
       return res.status(409).json({ error: 'That time slot is no longer available. Please pick another.' });
     }
 
@@ -149,15 +183,15 @@ app.post('/api/paypal/create-order', async (req, res) => {
     try {
       order = await paypal.createOrder(
         total,
-        `Campus2Class tutoring: ${quote.course.label} (${sessionLength} hr, ${format})`
+        `Campus2Class tutoring: ${quote.course.label} (${sessionLength} hr x ${requestedSessions.length}, ${format})`
       );
-      attachOrderToHold(holdId, order.id);
+      attachOrderToHolds(holdIds, order.id);
     } catch (error) {
-      releaseSlotHold(holdId);
+      holdIds.forEach((holdId) => releaseSlotHold(holdId));
       throw error;
     }
 
-    res.json({ orderId: order.id, total, ratePerHour: quote.ratePerHour });
+    res.json({ orderId: order.id, total, ratePerHour: quote.ratePerHour, sessions: requestedSessions });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -172,6 +206,9 @@ app.post('/api/paypal/capture-order', async (req, res) => {
       parentName,
       parentEmail,
       parentPhone,
+      addressStreet,
+      addressTown,
+      addressZip,
       studentName,
       gradeLevel,
       subject,
@@ -181,11 +218,20 @@ app.post('/api/paypal/capture-order', async (req, res) => {
       sessionLength,
       date,
       time,
+      sessions,
       notes,
     } = booking;
 
-    const hold = getHoldForOrder(orderId);
-    if (!hold || hold.session_date !== date || hold.session_time !== time) {
+    if (format === 'in-person' && (!addressStreet || !addressTown || !addressZip)) {
+      return res.status(400).json({ error: 'An in-person address is required.' });
+    }
+
+    const requestedSessions = Array.isArray(sessions) && sessions.length > 0
+      ? sessions
+      : [{ date, time }];
+    const holds = getHoldsForOrder(orderId);
+    const heldKeys = new Set(holds.map((hold) => `${hold.session_date}|${hold.session_time}`));
+    if (holds.length !== requestedSessions.length || requestedSessions.some((session) => !heldKeys.has(`${session.date}|${session.time}`))) {
       return res.status(409).json({ error: 'That time slot was just booked by someone else. You have not been charged twice; please contact us.' });
     }
 
@@ -197,11 +243,25 @@ app.post('/api/paypal/capture-order', async (req, res) => {
       throw error;
     }
     const quote = getQuote({ subject, courseId, struggle, format });
-    const total = quote.ratePerHour * Number(sessionLength);
+    const total = quote.ratePerHour * Number(sessionLength) * requestedSessions.length;
 
-    const id = uuidv4();
+    if (capture.status !== 'COMPLETED') {
+      releaseSlotHold(orderId);
+      return res.status(402).json({ error: 'PayPal did not complete the payment.' });
+    }
+
+    const existingPayment = db.prepare('SELECT booking_id FROM payments WHERE paypal_order_id = ?').get(orderId);
+    if (existingPayment) {
+      return res.json({ success: true, bookingId: existingPayment.booking_id, capture, emailSent: true });
+    }
+
     const clientId = uuidv4();
     const captureDetails = capture.purchase_units?.[0]?.payments?.captures?.[0];
+    const capturedAmount = Number(captureDetails?.amount?.value);
+    if (!captureDetails || captureDetails.amount.currency_code !== 'USD' || capturedAmount !== Number(total.toFixed(2))) {
+      releaseSlotHold(orderId);
+      return res.status(502).json({ error: 'The captured PayPal amount did not match this booking. Please contact us before trying again.' });
+    }
     const saveBooking = db.transaction(() => {
       const existingClient = db.prepare('SELECT id FROM clients WHERE email = ?').get(parentEmail.trim().toLowerCase());
       const resolvedClientId = existingClient?.id || clientId;
@@ -211,40 +271,36 @@ app.post('/api/paypal/capture-order', async (req, res) => {
       } else {
         db.prepare('UPDATE clients SET name = ?, phone = ? WHERE id = ?').run(parentName, parentPhone, resolvedClientId);
       }
-      db.prepare(
-      `INSERT INTO bookings (
-        id, client_id, student_name, grade_level,
-        subject, course, struggle, format, session_length, rate_per_hour, total_price,
-        session_date, session_time, notes, payment_status
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
-      ).run(
-      id,
-      resolvedClientId,
-      studentName,
-      gradeLevel,
-      subject,
-      quote.course.label,
-      struggle,
-      format,
-      sessionLength,
-      quote.ratePerHour,
-      total,
-      date,
-      time,
-      notes || '',
-      'paid'
-      );
+      const seriesId = requestedSessions.length > 1 ? uuidv4() : null;
+      const insertBooking = db.prepare(`
+        INSERT INTO bookings (
+          id, client_id, student_name, grade_level,
+          subject, course_id, course, struggle, format, session_length, rate_per_hour, total_price,
+          session_date, session_time, address_street, address_town, address_zip,
+          series_id, series_index, series_total, calendar_token, notes, payment_status
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      `);
+      const savedBookings = requestedSessions.map((session, index) => {
+        const bookingId = uuidv4();
+        insertBooking.run(
+          bookingId, resolvedClientId, studentName, gradeLevel, subject, courseId, quote.course.label,
+          struggle, format, sessionLength, quote.ratePerHour, quote.ratePerHour * Number(sessionLength),
+          session.date, session.time, addressStreet || null, addressTown || null, addressZip || null,
+          seriesId, index + 1, requestedSessions.length, uuidv4(), notes || '', 'paid'
+        );
+        return bookingId;
+      });
       db.prepare(`
         INSERT INTO payments (
           id, booking_id, client_id, paypal_order_id, paypal_capture_id,
           amount, currency, status
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
-        uuidv4(), id, resolvedClientId, orderId, captureDetails?.id || null,
+        uuidv4(), savedBookings[0], resolvedClientId, orderId, captureDetails?.id || null,
         total, captureDetails?.amount?.currency_code || 'USD', capture.status || 'COMPLETED'
       );
       releaseSlotHold(orderId);
-      return { id, clientId: resolvedClientId };
+      return { ids: savedBookings, clientId: resolvedClientId };
     });
     const saved = saveBooking();
 
@@ -257,15 +313,19 @@ app.post('/api/paypal/capture-order', async (req, res) => {
         course: quote.course.label,
         format,
         sessionLength,
-        date,
-        time,
+        date: requestedSessions[0].date,
+        time: requestedSessions[0].time,
         total,
       });
     } catch (emailError) {
       console.error(emailError);
     }
 
-    res.json({ success: true, bookingId: saved.id, capture, emailSent });
+    const calendarUrls = saved.ids.map((bookingId) => {
+      const calendarBooking = db.prepare('SELECT calendar_token FROM bookings WHERE id = ?').get(bookingId);
+      return `${req.protocol}://${req.get('host')}/api/bookings/${bookingId}/calendar.ics?token=${encodeURIComponent(calendarBooking.calendar_token)}`;
+    });
+    res.json({ success: true, bookingId: saved.ids[0], bookingIds: saved.ids, capture, emailSent, calendarUrl: calendarUrls[0], calendarUrls });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
